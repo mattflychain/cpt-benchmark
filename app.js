@@ -17,8 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const emailInput = document.getElementById('email-input');
 
     // Populate state dropdown
+    // process_cpt_csv.py excludes WV and DC from the data, but we should also exclude them from the UI
+    const EXCLUDED_STATES = ['WV', 'DC'];
+
     if (window.STATE_NAMES) {
         Object.entries(window.STATE_NAMES)
+            .filter(([code]) => !EXCLUDED_STATES.includes(code)) // Filter out excluded states
             .sort((a, b) => a[1].localeCompare(b[1]))
             .forEach(([code, name]) => {
                 const option = document.createElement('option');
@@ -85,11 +89,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return '$' + parseFloat(amount).toFixed(2);
     }
 
+    // Helper for safe text updates
+    function setSafeText(id, text) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = text;
+        } else {
+            console.warn(`Element with id "${id}" not found.`);
+        }
+    }
+
     // Validate form and enable button
     function validateForm() {
         const stateValid = selectedState !== null;
         const cptValid = selectedCpt !== null;
-        const billingValid = parseFloat(billingInput.value) > 0;
+        const billingVal = parseFloat(billingInput.value);
+        const billingValid = !isNaN(billingVal) && billingVal > 0;
+
+        console.log('Form Validation:', {
+            state: selectedState,
+            cpt: selectedCpt,
+            billing: billingInput.value,
+            isValid: stateValid && cptValid && billingValid,
+            checks: { stateValid, cptValid, billingValid }
+        });
+
         compareBtn.disabled = !(stateValid && cptValid && billingValid);
     }
 
@@ -107,13 +131,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // CPT code select handler
     cptInput.addEventListener('change', (e) => {
         selectedCpt = e.target.value;
-        if (selectedCpt) {
-            cptDescription.textContent = ABA_DATA[selectedCpt].description;
+        const data = window.ABA_DATA || {};
+        if (selectedCpt && data[selectedCpt]) {
+            cptDescription.textContent = data[selectedCpt].description;
             cptDescription.classList.add('visible');
             cptInput.classList.add('valid');
         } else {
+            console.warn('Review: CPT Code not found in data:', selectedCpt);
+            cptDescription.textContent = 'Select a valid code to see description.';
             cptDescription.classList.remove('visible');
             cptInput.classList.remove('valid');
+            selectedCpt = null;
         }
         validateForm();
     });
@@ -136,15 +164,24 @@ document.addEventListener('DOMContentLoaded', () => {
     compareBtn.addEventListener('click', () => {
         if (compareBtn.disabled) return;
 
-        // Email gate: if second+ analysis and no email, show modal
         const analysisCount = getAnalysisCount();
+        console.log('Button Clicked. Count:', analysisCount, 'Email:', hasUserEmail());
+
+        // Email gate: if second+ analysis and no email, show modal
         if (analysisCount >= 1 && !hasUserEmail()) {
+            console.log('Email Gate Triggered');
             emailModal.classList.remove('hidden');
             return;
         }
 
-        incrementAnalysisCount();
-        showResults();
+        try {
+            showResults();
+            // Increment ONLY if showResults didn't throw
+            incrementAnalysisCount();
+        } catch (error) {
+            console.error('Error in showResults:', error);
+            alert('An error occurred during calculation. Error: ' + error.message);
+        }
     });
 
     // Email form submission handler
@@ -156,37 +193,84 @@ document.addEventListener('DOMContentLoaded', () => {
             emailModal.classList.add('hidden');
             sendToZapier(email); // Trigger Zapier push
             incrementAnalysisCount();
-            showResults();
+            try {
+                showResults();
+            } catch (error) {
+                console.error('Error in showResults (after email):', error);
+            }
         }
     });
 
     function showResults() {
+        const data = window.ABA_DATA || {};
+        const names = window.STATE_NAMES || {};
+
+        console.log('Showing Results for:', selectedState, selectedCpt);
+
+        if (!selectedState || !selectedCpt || !data[selectedCpt]) {
+            console.error('Missing data for calculation:', { selectedState, selectedCpt, hasData: !!data[selectedCpt] });
+            throw new Error('Data missing for selected CPT: ' + selectedCpt);
+        }
+
+        const stats = data[selectedCpt].percentiles[selectedState];
         const userRate = parseFloat(billingInput.value);
-        const stateAvg = ABA_DATA[selectedCpt].stateAverages[selectedState] || 15;
-        const stateName = STATE_NAMES[selectedState] || selectedState;
+        const stateName = names[selectedState] || selectedState;
+
+        if (!stats) {
+            // Handle missing state data (e.g. WV, DC)
+            console.warn('No percentile data for state:', selectedState);
+
+            setSafeText('results-state', stateName);
+            setSafeText('your-rate', formatCurrency(userRate));
+            setSafeText('state-avg-value', 'N/A');
+
+            const insightIcon = document.getElementById('insight-icon');
+            const insightTitle = document.getElementById('insight-title');
+            const insightText = document.getElementById('insight-text');
+
+            if (insightIcon) insightIcon.textContent = '📍';
+            if (insightTitle) insightTitle.textContent = 'Data Unavailable';
+            if (insightText) insightText.textContent = `We do not have sufficient data for ${stateName} to provide a reliable benchmark for this code.`;
+
+            // Hide gauge or show empty state
+            const gaugeContainer = document.querySelector('.gauge-container');
+            if (gaugeContainer) gaugeContainer.style.opacity = '0.5';
+
+            inputCard.style.display = 'none';
+            resultsSection.classList.remove('hidden');
+            return;
+        }
+
+        const median = stats.p50;
+        console.log('Benchmark Logic:', { userRate, median, stats });
 
         // Update results
-        document.getElementById('results-state').textContent = stateName;
-        document.getElementById('your-rate').textContent = formatCurrency(userRate);
-        document.getElementById('state-avg-value').textContent = formatCurrency(stateAvg);
+        setSafeText('results-state', stateName);
+        setSafeText('your-rate', formatCurrency(userRate));
+        setSafeText('state-avg-value', formatCurrency(median));
 
-        // Calculate gauge position - ABA rates are tighter usually, so let's adjust max
-        const maxGauge = stateAvg * 1.5;
-        const position = Math.min(Math.max((userRate / maxGauge) * 100, 2), 98);
+        // Calculate gauge position - use p5 to p95 as the visual range
+        // If outside this range, clamp to 2% or 98%
+        const minVal = stats.p5 * 0.9;
+        const maxVal = stats.p95 * 1.1;
+        const range = maxVal - minVal;
+        const position = Math.min(Math.max(((userRate - minVal) / range) * 100, 2), 98);
+
         const marker = document.getElementById('gauge-marker');
         const markerEmoji = document.getElementById('marker-emoji');
 
-        document.getElementById('gauge-max').textContent = formatCurrency(maxGauge);
-        document.getElementById('gauge-avg').textContent = `Avg: ${formatCurrency(stateAvg)}`;
+        setSafeText('gauge-max', formatCurrency(stats.p95));
+        setSafeText('gauge-avg', `Median: ${formatCurrency(median)}`);
+        setSafeText('gauge-min', formatCurrency(stats.p5));
 
         // Animate gauge
-        setTimeout(() => {
-            marker.style.left = position + '%';
-        }, 100);
+        if (marker) {
+            setTimeout(() => {
+                marker.style.left = position + '%';
+            }, 100);
+        }
 
         // Update insight
-        const diff = userRate - stateAvg;
-        const diffPercent = ((diff / stateAvg) * 100).toFixed(0);
         const insightCard = document.getElementById('insight-card');
         const insightIcon = document.getElementById('insight-icon');
         const insightTitle = document.getElementById('insight-title');
@@ -198,61 +282,65 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctaSubtext = document.getElementById('cta-subtext');
         const yourRateCard = document.querySelector('.comparison-card.your-rate');
 
-        insightCard.classList.remove('above', 'below', 'on-target');
-        flychainCta.classList.remove('top-performer', 'needs-help');
-        yourRateCard.classList.remove('above', 'below', 'on-target');
+        if (insightCard) insightCard.classList.remove('above', 'below', 'on-target');
+        if (flychainCta) flychainCta.classList.remove('top-performer', 'needs-help');
+        if (yourRateCard) yourRateCard.classList.remove('above', 'below', 'on-target');
 
-        if (diff > stateAvg * 0.05) {
-            // Above average
-            insightCard.classList.add('above');
-            yourRateCard.classList.add('above');
-            insightIcon.textContent = '🚀';
-            insightTitle.textContent = 'Optimized Performance';
-            insightText.textContent = `Your rate is ${formatCurrency(Math.abs(diff))} (+${Math.abs(diffPercent)}%) above the ${stateName} benchmark for this service.`;
+        const gaugeContainer = document.querySelector('.gauge-container');
+        if (gaugeContainer) gaugeContainer.style.opacity = '1';
 
-            // Emoji for marker - gem for top agencies
-            markerEmoji.textContent = '💎';
+        // Logic based on percentiles
+        if (userRate >= stats.p75) {
+            // Above 75th percentile - Top Performer
+            if (insightCard) insightCard.classList.add('above');
+            if (yourRateCard) yourRateCard.classList.add('above');
+            if (insightIcon) insightIcon.textContent = '🚀';
+            if (insightTitle) insightTitle.textContent = 'Top Performer';
+            if (insightText) insightText.textContent = `Your rate is in the top tier (above 75th percentile) for ${stateName}. You are receiving premium reimbursement.`;
+
+            // Emoji for marker
+            if (markerEmoji) markerEmoji.textContent = '💎';
 
             // CTA for high billers
-            flychainCta.classList.add('top-performer');
-            ctaHeadline.textContent = "🚀 Leading rates deserve leading operations.";
-            ctaSubtext.textContent = "Top-performing agencies use Flychain's healthcare-specific accounting and CFO tools to protect their margins and automate financial reporting.";
+            if (flychainCta) flychainCta.classList.add('top-performer');
+            if (ctaHeadline) ctaHeadline.textContent = "🚀 Leading rates deserve leading operations.";
+            if (ctaSubtext) ctaSubtext.textContent = "Top-performing practices use Flychain's healthcare-specific accounting and CFO tools to protect their margins and automate financial reporting.";
 
-        } else if (diff < -stateAvg * 0.05) {
-            // Below average
-            insightCard.classList.add('below');
-            yourRateCard.classList.add('below');
-            insightIcon.textContent = '📉';
-            insightTitle.textContent = 'Revenue Opportunity';
-            insightText.textContent = `You're receiving ${formatCurrency(Math.abs(diff))} (${diffPercent}%) less than the ${stateName} benchmark. There may be room for negotiation.`;
+        } else if (userRate < stats.p25) {
+            // Below 25th percentile - Needs Improvement
+            if (insightCard) insightCard.classList.add('below');
+            if (yourRateCard) yourRateCard.classList.add('below');
+            if (insightIcon) insightIcon.textContent = '📉';
+            if (insightTitle) insightTitle.textContent = 'Below Market';
+            if (insightText) insightText.textContent = `Your rate is in the lower tier (below 25th percentile) for ${stateName}. There is significant room for negotiation.`;
 
-            // Emoji for marker - warning for low billers
-            markerEmoji.textContent = '⚠️';
+            // Emoji for marker
+            if (markerEmoji) markerEmoji.textContent = '⚠️';
 
-            // CTA for low billers - most aggressive
-            flychainCta.classList.add('needs-help');
-            ctaHeadline.textContent = `📊 Unlock higher reimbursement rates`;
-            ctaSubtext.textContent = `Flychain's CFO Intelligence tools show you exactly where you're underpaid - so you can negotiate with real payer data.`;
+            // CTA for low billers
+            if (flychainCta) flychainCta.classList.add('needs-help');
+            if (ctaHeadline) ctaHeadline.textContent = `📊 Unlock higher reimbursement rates`;
+            if (ctaSubtext) ctaSubtext.textContent = `Flychain's CFO Intelligence tools show you exactly where you're underpaid - so you can negotiate with real payer data.`;
 
         } else {
-            // Right on target
-            insightCard.classList.add('on-target');
-            yourRateCard.classList.add('on-target');
-            insightIcon.textContent = '✅';
-            insightTitle.textContent = 'Market Efficient';
-            insightText.textContent = `Your contracted rate is within 5% of the ${stateName} industry benchmark. Your reimbursement rates are aligned with market benchmarks.`;
+            // Between p25 and p75 - Market Competitive
+            if (insightCard) insightCard.classList.add('on-target');
+            if (yourRateCard) yourRateCard.classList.add('on-target');
+            if (insightIcon) insightIcon.textContent = '✅';
+            if (insightTitle) insightTitle.textContent = 'Market Competitive';
+            if (insightText) insightText.textContent = `Your rate is aligned with the market (between 25th and 75th percentile) for ${stateName}.`;
 
-            // Emoji for marker - check for on target
-            markerEmoji.textContent = '🎯';
+            // Emoji for marker
+            if (markerEmoji) markerEmoji.textContent = '🎯';
 
             // CTA for average billers
-            ctaHeadline.textContent = "💡 Great rates. How's your cash flow?";
-            ctaSubtext.textContent = "Even with competitive rates, generic accounting can mask inefficiencies. Flychain provides healthcare-specific financial clarity to keep your practice thriving.";
+            if (ctaHeadline) ctaHeadline.textContent = "💡 Great rates. How's your cash flow?";
+            if (ctaSubtext) ctaSubtext.textContent = "Even with competitive rates, generic accounting can mask inefficiencies. Flychain provides healthcare-specific financial clarity to keep your practice thriving.";
         }
 
         // Show results, hide input
-        inputCard.style.display = 'none';
-        resultsSection.classList.remove('hidden');
+        if (inputCard) inputCard.style.display = 'none';
+        if (resultsSection) resultsSection.classList.remove('hidden');
     }
 
     // Reset button handler
@@ -260,18 +348,15 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsSection.classList.add('hidden');
         inputCard.style.display = 'flex';
 
-        // Reset form
-        stateSelect.value = '';
+        // Partial reset: keep state and CPT, clear billing amount
+        // This allows them to check the same code again or just change the code/rate easily
         billingInput.value = '';
 
-        cptDescription.textContent = 'Rates vary by carrier; showing state-level benchmarks.';
-        stateSelect.classList.remove('valid');
-        cptInput.classList.remove('valid', 'invalid');
-        selectedState = null;
-        selectedCpt = null;
-        compareBtn.disabled = true;
+        // Ensure validation is run to update button state (it will likely be disabled if billing is empty)
+        validateForm();
 
-        // Reset gauge
-        document.getElementById('gauge-marker').style.left = '50%';
+        // Reset gauge marker position for next run
+        const marker = document.getElementById('gauge-marker');
+        if (marker) marker.style.left = '50%';
     });
 });
