@@ -232,9 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (insightTitle) insightTitle.textContent = 'Data Unavailable';
             if (insightText) insightText.textContent = `We do not have sufficient data for ${stateName} to provide a reliable benchmark for this code.`;
 
-            // Hide gauge or show empty state
-            const gaugeContainer = document.querySelector('.gauge-container');
-            if (gaugeContainer) gaugeContainer.style.opacity = '0.5';
+            // Hide distribution or show empty state
+            const distContainer = document.getElementById('distribution-container');
+            if (distContainer) distContainer.style.opacity = '0.5';
 
             inputCard.style.display = 'none';
             resultsSection.classList.remove('hidden');
@@ -246,27 +246,115 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update results
         setSafeText('results-state', stateName);
+        setSafeText('results-cpt', selectedCpt);
         setSafeText('your-rate', formatCurrency(userRate));
         setSafeText('state-avg-value', formatCurrency(median));
 
-        // Calculate gauge position - use p5 to p95 as the visual range
-        // If outside this range, clamp to 2% or 98%
-        const minVal = stats.p5 * 0.9;
-        const maxVal = stats.p95 * 1.1;
-        const range = maxVal - minVal;
-        const position = Math.min(Math.max(((userRate - minVal) / range) * 100, 2), 98);
+        // Calculate user's percentile position
+        function calculatePercentile(rate, stats) {
+            // Interpolate between known percentile points
+            const points = [
+                { percentile: 5, value: stats.p5 },
+                { percentile: 10, value: stats.p10 },
+                { percentile: 25, value: stats.p25 },
+                { percentile: 50, value: stats.p50 },
+                { percentile: 75, value: stats.p75 },
+                { percentile: 90, value: stats.p90 },
+                { percentile: 95, value: stats.p95 }
+            ];
 
-        const marker = document.getElementById('gauge-marker');
-        const markerEmoji = document.getElementById('marker-emoji');
+            // If below p5
+            if (rate <= points[0].value) {
+                return Math.max(1, Math.round((rate / points[0].value) * 5));
+            }
+            // If above p95
+            if (rate >= points[points.length - 1].value) {
+                return Math.min(99, 95 + Math.round(((rate - points[points.length - 1].value) / points[points.length - 1].value) * 20));
+            }
 
-        setSafeText('gauge-max', formatCurrency(stats.p95));
-        setSafeText('gauge-avg', `Median: ${formatCurrency(median)}`);
-        setSafeText('gauge-min', formatCurrency(stats.p5));
+            // Interpolate between points
+            for (let i = 0; i < points.length - 1; i++) {
+                if (rate >= points[i].value && rate <= points[i + 1].value) {
+                    const range = points[i + 1].value - points[i].value;
+                    const position = rate - points[i].value;
+                    const percentileRange = points[i + 1].percentile - points[i].percentile;
+                    return Math.round(points[i].percentile + (position / range) * percentileRange);
+                }
+            }
+            return 50; // Fallback
+        }
 
-        // Animate gauge
-        if (marker) {
+        const userPercentile = calculatePercentile(userRate, stats);
+
+        // Determine tier and position
+        let tierName = '';
+        let pointerPosition = 0; // percentage across the bar
+
+        if (userPercentile < 5) {
+            tierName = 'bottom5';
+            pointerPosition = (userPercentile / 5) * 5; // 0-5%
+        } else if (userPercentile < 25) {
+            tierName = 'p5-25';
+            pointerPosition = 5 + ((userPercentile - 5) / 20) * 20; // 5-25%
+        } else if (userPercentile < 50) {
+            tierName = 'p25-50';
+            pointerPosition = 25 + ((userPercentile - 25) / 25) * 25; // 25-50%
+        } else if (userPercentile < 75) {
+            tierName = 'p50-75';
+            pointerPosition = 50 + ((userPercentile - 50) / 25) * 25; // 50-75%
+        } else if (userPercentile < 95) {
+            tierName = 'p75-95';
+            pointerPosition = 75 + ((userPercentile - 75) / 20) * 20; // 75-95%
+        } else {
+            tierName = 'top5';
+            pointerPosition = 95 + ((userPercentile - 95) / 5) * 5; // 95-100%
+        }
+
+        // Clamp position
+        pointerPosition = Math.max(2, Math.min(98, pointerPosition));
+
+        // Get emoji based on percentile tier
+        let pointerEmoji = '📍';
+        if (userPercentile >= 95) pointerEmoji = '💎';
+        else if (userPercentile >= 75) pointerEmoji = '🚀';
+        else if (userPercentile >= 50) pointerEmoji = '✅';
+        else if (userPercentile >= 25) pointerEmoji = '🎯';
+        else if (userPercentile >= 5) pointerEmoji = '⚠️';
+        else pointerEmoji = '📉';
+
+        // Update distribution header
+        setSafeText('distribution-your-rate', formatCurrency(userRate));
+        setSafeText('pointer-rate', `${pointerEmoji} ${formatCurrency(userRate)}`);
+
+        // Format percentile badge
+        const percentileBadge = document.getElementById('percentile-badge');
+        if (percentileBadge) {
+            const suffix = getOrdinalSuffix(userPercentile);
+            percentileBadge.textContent = `${userPercentile}${suffix} Percentile`;
+            percentileBadge.classList.remove('below-median', 'near-median');
+            if (userPercentile < 25) {
+                percentileBadge.classList.add('below-median');
+            } else if (userPercentile < 75) {
+                percentileBadge.classList.add('near-median');
+            }
+        }
+
+        // Update segment labels with actual percentile values (simplified: min, median, max)
+        setSafeText('seg-label-p5', formatCurrency(stats.p5));
+        setSafeText('seg-label-p50', formatCurrency(stats.p50));
+        setSafeText('seg-label-p95', formatCurrency(stats.p95));
+
+        // Highlight active segment
+        const segments = document.querySelectorAll('.segment');
+        segments.forEach(seg => seg.classList.remove('active'));
+        const activeSegment = document.querySelector(`.segment[data-tier="${tierName}"]`);
+        if (activeSegment) activeSegment.classList.add('active');
+
+        // Animate pointer position
+        const pointer = document.getElementById('segment-pointer');
+        if (pointer) {
             setTimeout(() => {
-                marker.style.left = position + '%';
+                pointer.style.left = pointerPosition + '%';
             }, 100);
         }
 
@@ -286,8 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (flychainCta) flychainCta.classList.remove('top-performer', 'needs-help');
         if (yourRateCard) yourRateCard.classList.remove('above', 'below', 'on-target');
 
-        const gaugeContainer = document.querySelector('.gauge-container');
-        if (gaugeContainer) gaugeContainer.style.opacity = '1';
+        const distContainer = document.getElementById('distribution-container');
+        if (distContainer) distContainer.style.opacity = '1';
 
         // Logic based on percentiles
         if (userRate >= stats.p75) {
@@ -296,10 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (yourRateCard) yourRateCard.classList.add('above');
             if (insightIcon) insightIcon.textContent = '🚀';
             if (insightTitle) insightTitle.textContent = 'Top Performer';
-            if (insightText) insightText.textContent = `Your rate is in the top tier (above 75th percentile) for ${stateName}. You are receiving premium reimbursement.`;
-
-            // Emoji for marker
-            if (markerEmoji) markerEmoji.textContent = '💎';
+            if (insightText) insightText.textContent = `Your rate is in the top tier (above 75th percentile) for ${stateName}. You are receiving stronger-than-average reimbursement in your market.`;
 
             // CTA for high billers
             if (flychainCta) flychainCta.classList.add('top-performer');
@@ -314,9 +399,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (insightTitle) insightTitle.textContent = 'Below Market';
             if (insightText) insightText.textContent = `Your rate is in the lower tier (below 25th percentile) for ${stateName}. There is significant room for negotiation.`;
 
-            // Emoji for marker
-            if (markerEmoji) markerEmoji.textContent = '⚠️';
-
             // CTA for low billers
             if (flychainCta) flychainCta.classList.add('needs-help');
             if (ctaHeadline) ctaHeadline.textContent = `📊 Unlock higher reimbursement rates`;
@@ -330,17 +412,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (insightTitle) insightTitle.textContent = 'Market Competitive';
             if (insightText) insightText.textContent = `Your rate is aligned with the market (between 25th and 75th percentile) for ${stateName}.`;
 
-            // Emoji for marker
-            if (markerEmoji) markerEmoji.textContent = '🎯';
-
             // CTA for average billers
-            if (ctaHeadline) ctaHeadline.textContent = "💡 Great rates. How's your cash flow?";
+            if (ctaHeadline) ctaHeadline.textContent = "💡 Market-standard rates. How's your cash flow?";
             if (ctaSubtext) ctaSubtext.textContent = "Even with competitive rates, generic accounting can mask inefficiencies. Flychain provides healthcare-specific financial clarity to keep your practice thriving.";
         }
 
         // Show results, hide input
         if (inputCard) inputCard.style.display = 'none';
         if (resultsSection) resultsSection.classList.remove('hidden');
+    }
+
+    // Helper for ordinal suffix
+    function getOrdinalSuffix(n) {
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return s[(v - 20) % 10] || s[v] || s[0];
     }
 
     // Reset button handler
@@ -355,8 +441,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ensure validation is run to update button state (it will likely be disabled if billing is empty)
         validateForm();
 
-        // Reset gauge marker position for next run
-        const marker = document.getElementById('gauge-marker');
-        if (marker) marker.style.left = '50%';
+        // Reset pointer position for next run
+        const pointer = document.getElementById('segment-pointer');
+        if (pointer) pointer.style.left = '50%';
     });
 });

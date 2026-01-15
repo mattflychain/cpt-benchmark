@@ -423,22 +423,29 @@ body {
 
 .results-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.results-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .results-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 700;
 }
 
-.results-state {
+.results-subtitle {
     font-size: 0.875rem;
     font-weight: 600;
+    color: var(--text-muted);
+}
+
+.results-subtitle span {
     color: var(--primary);
-    background: rgba(106, 89, 255, 0.1);
-    padding: 6px 14px;
-    border-radius: 100px;
 }
 
 .gauge-container {
@@ -496,6 +503,210 @@ body {
 .gauge-avg {
     color: var(--primary-dark);
     font-weight: 700;
+}
+
+/* Distribution Segments Visualization */
+.distribution-container {
+    padding: 0;
+}
+
+.distribution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.distribution-your-rate {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+    line-height: 1;
+}
+
+.distribution-percentile-badge {
+    background: linear-gradient(135deg, var(--accent-sage), #5bb35b);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 100px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    box-shadow: 0 2px 8px rgba(122, 196, 122, 0.3);
+    white-space: nowrap;
+}
+
+.distribution-percentile-badge.below-median {
+    background: linear-gradient(135deg, var(--accent-coral), #e04a36);
+    box-shadow: 0 2px 8px rgba(244, 99, 77, 0.3);
+}
+
+.distribution-percentile-badge.near-median {
+    background: linear-gradient(135deg, #f0b800, #d9a600);
+    color: var(--primary-dark);
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+}
+
+.segment-bar-wrapper {
+    position: relative;
+    margin: 0 0 1.5rem;
+    padding-top: 3rem;
+}
+
+.segment-bar {
+    display: flex;
+    height: 40px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: rgba(17, 8, 35, 0.05);
+}
+
+.segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+.segment span {
+    opacity: 0.9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.segment.bottom-5 {
+    background: #d93b2a;
+    width: 5%;
+}
+
+.segment.p5-25 {
+    background: var(--accent-coral);
+    width: 20%;
+}
+
+.segment.p25-50 {
+    background: #f0b800;
+    width: 25%;
+    color: var(--primary-dark);
+}
+
+.segment.p50-75 {
+    background: #8bc34a;
+    width: 25%;
+}
+
+.segment.p75-95 {
+    background: var(--accent-sage);
+    width: 20%;
+}
+
+.segment.top-5 {
+    background: var(--primary);
+    width: 5%;
+}
+
+.segment.active {
+    box-shadow: inset 0 0 0 3px var(--primary-dark);
+}
+
+.segment-pointer {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: left var(--transition-slow);
+    z-index: 10;
+}
+
+.pointer-label {
+    background: var(--primary-dark);
+    color: var(--white);
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(17, 8, 35, 0.2);
+}
+
+.pointer-arrow {
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid var(--primary-dark);
+}
+
+.segment-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.segment-legend {
+    display: none;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.legend-dot.bottom5 {
+    background: #d93b2a;
+}
+
+.legend-dot.below-avg {
+    background: var(--accent-coral);
+}
+
+.legend-dot.near-median {
+    background: #f0b800;
+}
+
+.legend-dot.above-avg {
+    background: #8bc34a;
+}
+
+.legend-dot.high-perf {
+    background: var(--accent-sage);
+}
+
+.legend-dot.top5 {
+    background: var(--primary);
+}
+
+.results-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.results-cpt {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    background: rgba(17, 8, 35, 0.08);
+    padding: 6px 14px;
+    border-radius: 100px;
 }
 
 .comparison-cards {

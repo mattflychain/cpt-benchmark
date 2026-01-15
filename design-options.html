@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualization Options | ABA Rate Benchmark</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f12;
+            --bg-secondary: #1a1a21;
+            --bg-card: #222230;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --accent-green: #22c55e;
+            --accent-yellow: #eab308;
+            --accent-orange: #f97316;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --gradient-gauge: linear-gradient(90deg, #ff4444 0%, #ffa500 25%, #ffdd00 50%, #90EE90 75%, #22c55e 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #a0a0b0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .option-card {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .option-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .option-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+        }
+
+        .option-badge {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent-purple);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* =========================================
+           OPTION 1: Percentile Ladder
+           ========================================= */
+        .percentile-ladder {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .percentile-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+
+        .percentile-row.highlighted {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+            border: 1px solid var(--accent-purple);
+        }
+
+        .percentile-row.you-marker {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
+            border: 1px solid var(--accent-green);
+        }
+
+        .percentile-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            width: 80px;
+        }
+
+        .percentile-bar-container {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .percentile-bar {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+        }
+
+        .percentile-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            width: 70px;
+            text-align: right;
+        }
+
+        .your-rate-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--accent-green);
+            color: #000;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
+        /* =========================================
+           OPTION 2: Donut Chart with Percentile Position
+           ========================================= */
+        .donut-container {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .donut-chart {
+            position: relative;
+            width: 180px;
+            height: 180px;
+        }
+
+        .donut-svg {
+            transform: rotate(-90deg);
+        }
+
+        .donut-track {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 16;
+        }
+
+        .donut-progress {
+            fill: none;
+            stroke-width: 16;
+            stroke-linecap: round;
+            stroke-dasharray: 439.8;
+            stroke-dashoffset: 154;
+            /* 65% position */
+            stroke: url(#gradient);
+        }
+
+        .donut-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .donut-percentile {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #22c55e, #4ade80);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .donut-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .donut-stats {
+            flex: 1;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .stat-value.highlight {
+            color: var(--accent-green);
+        }
+
+        /* =========================================
+           OPTION 3: Horizontal Segment Bar
+           ========================================= */
+        .segment-visualization {
+            padding: 1rem 0;
+        }
+
+        .segment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 1rem;
+        }
+
+        .segment-your-rate {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .segment-percentile-badge {
+            background: linear-gradient(135deg, #22c55e, #4ade80);
+            color: #000;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .segment-bar-wrapper {
+            position: relative;
+            margin: 2rem 0;
+        }
+
+        .segment-bar {
+            display: flex;
+            height: 48px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: rgba(0, 0, 0, 0.7);
+            transition: all 0.2s;
+        }
+
+        .segment.bottom-5 {
+            background: #ef4444;
+            width: 5%;
+        }
+
+        .segment.p5-25 {
+            background: #f97316;
+            width: 20%;
+        }
+
+        .segment.p25-50 {
+            background: #eab308;
+            width: 25%;
+        }
+
+        .segment.p50-75 {
+            background: #84cc16;
+            width: 25%;
+        }
+
+        .segment.p75-95 {
+            background: #22c55e;
+            width: 20%;
+        }
+
+        .segment.top-5 {
+            background: #14b8a6;
+            width: 5%;
+        }
+
+        .segment.active {
+            box-shadow: inset 0 0 0 3px #fff;
+        }
+
+        .segment-pointer {
+            position: absolute;
+            top: -30px;
+            left: 72%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pointer-label {
+            background: var(--bg-card);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid var(--accent-green);
+            white-space: nowrap;
+        }
+
+        .pointer-arrow {
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid var(--accent-green);
+            margin-top: -1px;
+        }
+
+        .segment-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .segment-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* =========================================
+           OPTION 4: Comparison Cards with Sparkline
+           ========================================= */
+        .cards-visualization {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .rate-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .rate-card.your-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05));
+            border: 1px solid var(--accent-purple);
+        }
+
+        .rate-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 1.5rem;
+        }
+
+        .rate-card.your-card .rate-icon {
+            background: var(--accent-purple);
+        }
+
+        .rate-info {
+            flex: 1;
+        }
+
+        .rate-title {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .rate-amount {
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .rate-comparison {
+            text-align: right;
+        }
+
+        .rate-diff {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .rate-diff.positive {
+            color: var(--accent-green);
+        }
+
+        .rate-diff.negative {
+            color: var(--accent-red);
+        }
+
+        .rate-diff-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .distribution-chart {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+        }
+
+        .chart-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .mini-distribution {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 60px;
+        }
+
+        .dist-bar {
+            flex: 1;
+            background: rgba(139, 92, 246, 0.3);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+        }
+
+        .dist-bar.highlighted {
+            background: var(--accent-purple);
+        }
+
+        .dist-bar.you-position::after {
+            content: '📍';
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1rem;
+        }
+
+        .chart-x-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 1024px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-header">
+        <h1>📊 Visualization Design Options</h1>
+        <p>Choose the best way to present percentile-based rate data</p>
+    </div>
+
+    <div class="options-grid">
+        <!-- OPTION 1: Percentile Ladder -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-title">Option 1: Percentile Ladder</span>
+                <span class="option-badge">Detailed View</span>
+            </div>
+
+            <div class="percentile-ladder">
+                <div class="percentile-row">
+                    <span class="percentile-label">95th</span>
+                    <div class="percentile-bar-container">
+                        <div class="percentile-bar" style="width: 100%"></div>
+                    </div>
+                    <span class="percentile-value">$29.18</span>
+                </div>
+                <div class="percentile-row">
+                    <span class="percentile-label">75th</span>
+                    <div class="percentile-bar-container">
+                        <div class="percentile-bar" style="width: 80%"></div>
+                    </div>
+                    <span class="percentile-value">$27.30</span>
+                </div>
+                <div class="percentile-row you-marker">
+                    <span class="percentile-label">You </span>
+                    <div class="percentile-bar-container">
+                        <div class="percentile-bar"
+                            style="width: 72%; background: linear-gradient(90deg, #22c55e, #4ade80)"></div>
+                    </div>
+                    <span class="percentile-value">$26.00 <span class="your-rate-tag">~72nd</span></span>
+                </div>
+                <div class="percentile-row highlighted">
+                    <span class="percentile-label">50th (Median)</span>
+                    <div class="percentile-bar-container">
+                        <div class="percentile-bar" style="width: 60%"></div>
+                    </div>
+                    <span class="percentile-value">$24.53</span>
+                </div>
+                <div class="percentile-row">
+                    <span class="percentile-label">25th</span>
+                    <div class="percentile-bar-container">
+                        <div class="percentile-bar" style="width: 40%"></div>
+                    </div>
+                    <span class="percentile-value">$23.20</span>
+                </div>
+                <div class="percentile-row">
+                    <span class="percentile-label">5th</span>
+                    <div class="percentile-bar-container">
+                        <div class="percentile-bar" style="width: 20%"></div>
+                    </div>
+                    <span class="percentile-value">$22.20</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPTION 2: Donut Chart -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-title">Option 2: Percentile Ring</span>
+                <span class="option-badge">Visual Impact</span>
+            </div>
+
+            <div class="donut-container">
+                <div class="donut-chart">
+                    <svg class="donut-svg" width="180" height="180" viewBox="0 0 180 180">
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#ef4444" />
+                                <stop offset="50%" stop-color="#eab308" />
+                                <stop offset="100%" stop-color="#22c55e" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="donut-track" cx="90" cy="90" r="70" />
+                        <circle class="donut-progress" cx="90" cy="90" r="70" />
+                    </svg>
+                    <div class="donut-center">
+                        <div class="donut-percentile">72<sup style="font-size: 1rem">nd</sup></div>
+                        <div class="donut-label">percentile</div>
+                    </div>
+                </div>
+
+                <div class="donut-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Your Rate</span>
+                        <span class="stat-value highlight">$26.00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">State Median</span>
+                        <span class="stat-value">$24.53</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">vs. Median</span>
+                        <span class="stat-value highlight">+$1.47 (+6%)</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Range (5th-95th)</span>
+                        <span class="stat-value">$22.20 - $29.18</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPTION 3: Segment Bar -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-title">Option 3: Distribution Segments</span>
+                <span class="option-badge">Clear Tiers</span>
+            </div>
+
+            <div class="segment-visualization">
+                <div class="segment-header">
+                    <span class="segment-your-rate">$26.00</span>
+                    <span class="segment-percentile-badge">72nd Percentile</span>
+                </div>
+
+                <div class="segment-bar-wrapper">
+                    <div class="segment-pointer">
+                        <div class="pointer-label">📍 You: $26.00</div>
+                        <div class="pointer-arrow"></div>
+                    </div>
+                    <div class="segment-bar">
+                        <div class="segment bottom-5"></div>
+                        <div class="segment p5-25">5-25th</div>
+                        <div class="segment p25-50">25-50th</div>
+                        <div class="segment p50-75">50-75th</div>
+                        <div class="segment p75-95 active">75-95th</div>
+                        <div class="segment top-5"></div>
+                    </div>
+                    <div class="segment-labels">
+                        <span>$22.20</span>
+                        <span>$23.20</span>
+                        <span>$24.53</span>
+                        <span>$27.30</span>
+                        <span>$29.18</span>
+                    </div>
+                </div>
+
+                <div class="segment-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #ef4444"></div>
+                        <span>Bottom 5%</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #f97316"></div>
+                        <span>Below Avg</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #eab308"></div>
+                        <span>Near Median</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #84cc16"></div>
+                        <span>Above Avg</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #22c55e"></div>
+                        <span>High Performer</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #14b8a6"></div>
+                        <span>Top 5%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPTION 4: Comparison Cards -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-title">Option 4: Cards + Distribution</span>
+                <span class="option-badge">Clean & Simple</span>
+            </div>
+
+            <div class="cards-visualization">
+                <div class="rate-card your-card">
+                    <div class="rate-icon">📍</div>
+                    <div class="rate-info">
+                        <div class="rate-title">Your Rate</div>
+                        <div class="rate-amount">$26.00</div>
+                    </div>
+                    <div class="rate-comparison">
+                        <div class="rate-diff positive">+6%</div>
+                        <div class="rate-diff-label">vs median</div>
+                    </div>
+                </div>
+
+                <div class="rate-card">
+                    <div class="rate-icon">📊</div>
+                    <div class="rate-info">
+                        <div class="rate-title">State Median (50th)</div>
+                        <div class="rate-amount">$24.53</div>
+                    </div>
+                </div>
+
+                <div class="distribution-chart">
+                    <span class="chart-label">Rate Distribution in Arizona</span>
+                    <div class="mini-distribution">
+                        <!-- Heights represent frequency at each percentile range -->
+                        <div class="dist-bar" style="height: 20%"></div>
+                        <div class="dist-bar" style="height: 35%"></div>
+                        <div class="dist-bar" style="height: 55%"></div>
+                        <div class="dist-bar highlighted" style="height: 80%"></div>
+                        <div class="dist-bar highlighted" style="height: 100%"></div>
+                        <div class="dist-bar highlighted" style="height: 90%"></div>
+                        <div class="dist-bar highlighted you-position" style="height: 70%"></div>
+                        <div class="dist-bar" style="height: 50%"></div>
+                        <div class="dist-bar" style="height: 30%"></div>
+                        <div class="dist-bar" style="height: 15%"></div>
+                    </div>
+                    <div class="chart-x-labels">
+                        <span>$22</span>
+                        <span>$24</span>
+                        <span>$26</span>
+                        <span>$28</span>
+                        <span>$30</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

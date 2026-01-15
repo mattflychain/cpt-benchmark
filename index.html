@@ -93,23 +93,38 @@
             <section class="results-section hidden" id="results">
                 <div class="results-card">
                     <div class="results-header">
-                        <h2 class="results-title">Contracted Rate Benchmark</h2>
-                        <span class="results-state" id="results-state"></span>
-                    </div>
-
-                    <div class="gauge-container">
-                        <div class="gauge">
-                            <div class="gauge-fill" id="gauge-fill"></div>
-                            <div class="gauge-marker" id="gauge-marker">
-                                <div class="marker-line"></div>
-                                <div class="marker-label" id="marker-label"><span class="marker-emoji"
-                                        id="marker-emoji">📍</span> You</div>
+                        <div class="results-title-group">
+                            <h2 class="results-title">Rate Benchmark</h2>
+                            <div class="results-subtitle">
+                                <span id="results-cpt"></span> • <span id="results-state"></span>
                             </div>
                         </div>
-                        <div class="gauge-labels">
-                            <span class="gauge-min" id="gauge-min">$0</span>
-                            <span class="gauge-avg" id="gauge-avg">Market Median</span>
-                            <span class="gauge-max" id="gauge-max">$200</span>
+                    </div>
+
+                    <div class="distribution-container" id="distribution-container">
+                        <div class="distribution-header">
+                            <span class="distribution-your-rate" id="distribution-your-rate">$0.00</span>
+                            <span class="distribution-percentile-badge" id="percentile-badge">--</span>
+                        </div>
+
+                        <div class="segment-bar-wrapper">
+                            <div class="segment-pointer" id="segment-pointer">
+                                <div class="pointer-label"><span id="pointer-rate">$0.00</span></div>
+                                <div class="pointer-arrow"></div>
+                            </div>
+                            <div class="segment-bar">
+                                <div class="segment bottom-5" data-tier="bottom5"></div>
+                                <div class="segment p5-25" data-tier="p5-25"></div>
+                                <div class="segment p25-50" data-tier="p25-50"><span>Median</span></div>
+                                <div class="segment p50-75" data-tier="p50-75"></div>
+                                <div class="segment p75-95" data-tier="p75-95"></div>
+                                <div class="segment top-5" data-tier="top5"></div>
+                            </div>
+                            <div class="segment-labels">
+                                <span id="seg-label-p5">$0</span>
+                                <span id="seg-label-p50">Median</span>
+                                <span id="seg-label-p95">$0</span>
+                            </div>
                         </div>
                     </div>
 
@@ -154,7 +169,7 @@
                             </div>
                             <a href="https://www.flychain.us/contact" target="_blank" rel="noopener noreferrer"
                                 class="cta-button">
-                                <span>Get Started</span>
+                                <span>Book a Free Demo</span>
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
                                     xmlns="http://www.w3.org/2000/svg">
                                     <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="2"
