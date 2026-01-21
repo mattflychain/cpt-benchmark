@@ -1,22 +1,51 @@
 :root {
-    --primary: #6a59ff;
-    --primary-hover: #5a49ef;
-    --primary-glow: rgba(106, 89, 255, 0.3);
+    /* Primary (Purple Gradient) */
+    --primary: #6459FF;
+    --primary-start: #8958FF;
+    --primary-end: #6459FF;
+    --primary-hover: #5449ef;
+    --primary-glow: rgba(100, 89, 255, 0.3);
     --primary-dark: #110823;
-    --background: #fcfbf7;
-    --accent-coral: #f4634d;
-    --accent-coral-light: rgba(244, 99, 77, 0.1);
-    --accent-sage: #7ac47a;
-    --accent-sage-light: rgba(122, 196, 122, 0.1);
+
+    /* Background */
+    --background: #FAF7F4;
+
+    /* Accent - Teal (Success/Positive) */
+    --accent-teal-start: #0F8B7A;
+    --accent-teal-end: #22CDB5;
+    --accent-teal: #0F8B7A;
+    --accent-teal-light: rgba(15, 139, 122, 0.1);
+
+    /* Accent - Coral/Orange (Warnings/Below) */
+    --accent-coral-start: #FFA348;
+    --accent-coral-end: #FF9887;
+    --accent-coral: #FFA348;
+    --accent-coral-light: rgba(255, 163, 72, 0.1);
+
+    /* Other Accents */
+    --accent-lavender: #B3ADFC;
+    --accent-gray: #E9E8EB;
+
+    /* Legacy aliases for compatibility */
+    --accent-sage: var(--accent-teal);
+    --accent-sage-light: var(--accent-teal-light);
+
+    /* Text */
     --text-muted: #858eb3;
     --white: #ffffff;
+
+    /* Shadows */
     --card-shadow: 0 4px 24px rgba(17, 8, 35, 0.08);
     --card-shadow-hover: 0 8px 32px rgba(17, 8, 35, 0.12);
     --border-light: rgba(17, 8, 35, 0.08);
+
+    /* Radius */
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 20px;
     --radius-xl: 28px;
+
+    /* Transitions */
     --transition-fast: 0.15s ease;
     --transition-medium: 0.3s ease;
     --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -36,7 +65,7 @@ html {
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Barlow', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--background);
     color: var(--primary-dark);
     line-height: 1.6;
@@ -133,6 +162,7 @@ body {
 }
 
 .hero-title {
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 2rem;
     font-weight: 800;
     line-height: 1.2;
@@ -140,7 +170,7 @@ body {
 }
 
 .highlight {
-    background: linear-gradient(135deg, var(--primary) 0%, #8b7bff 100%);
+    background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -334,9 +364,9 @@ body {
     padding: 18px 24px;
     font-size: 1rem;
     font-weight: 600;
-    font-family: inherit;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
     color: var(--white);
-    background: linear-gradient(135deg, var(--primary) 0%, #8b7bff 100%);
+    background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
     border: none;
     border-radius: 100px;
     cursor: pointer;
@@ -434,6 +464,7 @@ body {
 }
 
 .results-title {
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.125rem;
     font-weight: 700;
 }
@@ -455,7 +486,7 @@ body {
 .gauge {
     position: relative;
     height: 24px;
-    background: linear-gradient(90deg, var(--accent-coral) 0%, #ffd700 50%, var(--accent-sage) 100%);
+    background: linear-gradient(90deg, var(--accent-coral) 0%, #ffd700 50%, var(--accent-teal) 100%);
     border-radius: 100px;
     overflow: visible;
 }
@@ -526,19 +557,19 @@ body {
 }
 
 .distribution-percentile-badge {
-    background: linear-gradient(135deg, var(--accent-sage), #5bb35b);
+    background: linear-gradient(135deg, var(--accent-teal-start) 0%, var(--accent-teal-end) 100%);
     color: white;
     padding: 0.5rem 1rem;
     border-radius: 100px;
     font-weight: 700;
     font-size: 0.875rem;
-    box-shadow: 0 2px 8px rgba(122, 196, 122, 0.3);
+    box-shadow: 0 2px 8px rgba(15, 139, 122, 0.3);
     white-space: nowrap;
 }
 
 .distribution-percentile-badge.below-median {
-    background: linear-gradient(135deg, var(--accent-coral), #e04a36);
-    box-shadow: 0 2px 8px rgba(244, 99, 77, 0.3);
+    background: linear-gradient(135deg, var(--accent-coral-start) 0%, var(--accent-coral-end) 100%);
+    box-shadow: 0 2px 8px rgba(255, 163, 72, 0.3);
 }
 
 .distribution-percentile-badge.near-median {
@@ -1176,7 +1207,7 @@ body {
 /* Flychain CTA Funnel */
 .flychain-cta {
     position: relative;
-    background: linear-gradient(135deg, var(--primary) 0%, #8b7bff 50%, #a594ff 100%);
+    background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
     border-radius: var(--radius-lg);
     padding: 24px;
     overflow: hidden;
@@ -1219,6 +1250,7 @@ body {
 }
 
 .cta-headline {
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.125rem;
     font-weight: 700;
     color: var(--white);
@@ -1265,19 +1297,19 @@ body {
 
 /* CTA Variations */
 .flychain-cta.top-performer {
-    background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
+    background: linear-gradient(135deg, var(--accent-teal-start) 0%, var(--accent-teal-end) 100%);
 }
 
 .flychain-cta.top-performer .cta-button {
-    color: #10b981;
+    color: var(--accent-teal);
 }
 
 .flychain-cta.needs-help {
-    background: linear-gradient(135deg, #f97316 0%, #fb923c 50%, #fdba74 100%);
+    background: linear-gradient(135deg, var(--accent-coral-start) 0%, var(--accent-coral-end) 100%);
 }
 
 .flychain-cta.needs-help .cta-button {
-    color: #f97316;
+    color: var(--accent-coral);
 }
 
 /* ===== MOBILE RESPONSIVE STYLES ===== */
@@ -1578,9 +1610,9 @@ body {
     padding: 16px 24px;
     font-size: 1rem;
     font-weight: 600;
-    font-family: inherit;
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
     color: var(--white);
-    background: linear-gradient(135deg, var(--primary) 0%, #8b7bff 100%);
+    background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
     border: none;
     border-radius: 100px;
     cursor: pointer;
