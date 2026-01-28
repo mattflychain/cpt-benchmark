@@ -166,6 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
     compareBtn.addEventListener('click', () => {
         if (compareBtn.disabled) return;
 
+        // 🔥 Fire Meta Pixel event via postMessage to parent
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'fb-pixel-event', event: 'ViewContent' }, '*');
+        }
+
         const analysisCount = getAnalysisCount();
         console.log('Button Clicked. Count:', analysisCount, 'Email:', hasUserEmail());
 
@@ -404,5 +409,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 attributes: true
             });
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Meta Pixel: Track "Book a Call" CTA clicks
+    // ─────────────────────────────────────────────────────────────────────────
+    const ctaButton = document.querySelector('.cta-button');
+    if (ctaButton) {
+        ctaButton.addEventListener('click', () => {
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'fb-pixel-event', event: 'Schedule' }, '*');
+            }
+        });
     }
 });
