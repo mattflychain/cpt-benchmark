@@ -257,17 +257,20 @@ document.addEventListener('DOMContentLoaded', () => {
     compareBtn.addEventListener('click', () => {
         if (compareBtn.disabled) return;
 
-        // 🔥 Fire Meta Pixel event via postMessage to parent
-        if (window.parent !== window) {
-            window.parent.postMessage({ type: 'fb-pixel-event', event: 'ViewContent' }, '*');
-        }
-
         const analysisCount = getAnalysisCount();
         console.log('Button Clicked. Count:', analysisCount, 'Email:', hasUserEmail());
 
-        // 🔥 Track first benchmark check via Zapier (silent, no user input)
-        if (analysisCount === 0) {
-            trackFirstBenchmarkCheck();
+        // Only fire Meta Pixel & Zapier events if in iframe (not direct page load)
+        if (window.parent !== window) {
+            // 🔥 Track first benchmark check via Meta Pixel & Zapier (silent, no user input)
+            if (analysisCount === 0) {
+                window.parent.postMessage({ type: 'fb-pixel-event', event: 'First CPT Benchmark Check' }, '*');
+                trackFirstBenchmarkCheck();
+            } else {
+                // 🔥 Track subsequent benchmark check via Meta Pixel only (no Zapier) and send analysis count and email to parent
+                window.parent.postMessage({ type: 'fb-pixel-event', event: 'Subsequent CPT Benchmark Check', analysisCount: analysisCount, email: hasUserEmail() }, '*');
+            }
+            
         }
 
         // Email gate: if second+ analysis and no email, show modal
